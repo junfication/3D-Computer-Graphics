@@ -102,7 +102,7 @@ void GUI::Update()
 
   // main menu
   BeginMainMenuBar();
-  Text("CS300 GUI");
+  Text("GUI");
   Separator();
   //Text("%d", moved);
   if (Button("Open Obj File")) Obj_Open = !Obj_Open;
