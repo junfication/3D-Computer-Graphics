@@ -1,0 +1,20 @@
+#version 410 core
+
+uniform mat4  vertexTransform;
+uniform sampler2D skyBoxTexture;
+
+// Input vertex data, different for all executions of this shader.
+layout(location = 0) in vec3 modelPosition;
+layout(location = 3) in vec2 uvPosition;
+
+// Interpolating vertex attributes over the rasterizer
+out VS_OUTPUT
+{
+    vec2 uvPosition;
+} vs_out;
+
+void main()
+{
+    vs_out.uvPosition = uvPosition;
+    gl_Position = vertexTransform *  vec4( modelPosition, 1.0f );
+}

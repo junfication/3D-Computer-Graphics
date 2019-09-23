@@ -1,0 +1,25 @@
+#version 410 core
+
+uniform mat4  vertexTransform;
+uniform mat4  worldTransform;
+
+// Input vertex data, different for all executions of this shader.
+layout(location = 0) in vec3    vPosition;
+layout(location = 2) in vec3    vertexNormal;
+layout(location = 3) in vec2    vUV;
+
+// Interpolating vertex attributes over the rasterizer
+out VS_OUT
+{
+    vec4 vertexPosition; // interpolated vPosition
+    vec4 VN;
+    vec2 UV;
+} vs_out;
+
+void main()
+{
+    vs_out.vertexPosition = worldTransform * vec4( vPosition, 1.0f );
+    vs_out.UV = vUV;
+    vs_out.VN = worldTransform * vec4( vertexNormal, 0.f );
+    gl_Position = vertexTransform *  vec4( vPosition, 1.0f );
+}

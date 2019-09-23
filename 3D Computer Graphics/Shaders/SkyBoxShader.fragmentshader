@@ -1,0 +1,17 @@
+#version 410 core
+
+uniform sampler2D skyBoxTexture;
+
+in VS_OUTPUT
+{
+    vec2 uvPosition;
+} fs_in;
+
+// Output data
+out vec3 color;
+
+
+void main()
+{
+    color = texture(skyBoxTexture, fs_in.uvPosition).rgb;
+}

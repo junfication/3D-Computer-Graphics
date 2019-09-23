@@ -1,0 +1,18 @@
+#version 410 core
+
+uniform sampler2D texSampler;
+
+// Interpolating vertex attributes over the rasterizer
+in VS_OUT
+{
+    vec4 vertexPosition; // interpolated vPosition
+    vec2 vertexUV;       // interpolated vUV
+
+} fs_in;
+
+layout(location=0) out vec3 color;
+
+void main()
+{
+  color   = texture( texSampler, fs_in.vertexUV ).rgb;
+}

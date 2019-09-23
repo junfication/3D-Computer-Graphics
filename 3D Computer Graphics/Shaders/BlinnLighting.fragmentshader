@@ -1,0 +1,122 @@
+#version 410 core
+
+#define M_PI   3.14159265358979323846264338327950288
+
+uniform LightArray
+{
+  // Light Independant
+  int  LightActive[8]; // 0 = active, 1 = inactive
+  int  LightType[8]; // 0 = Point Light, 1 = Spotlight, 2 = Directional Light
+  vec3 LightPosition[8];
+  vec3 Ambient[8];
+  vec3 Emissive; // should be global only 1 instance not array
+  vec3 I_Specular[8];
+  vec3 I_Diffuse[8];
+  vec3 LightDirection[8];
+  vec3 LightAngle[8]; // x = inner angle, y = outer angle, z = spot falloff
+  vec3 K_Ambient; // should be global only 1 instance not array, material ambient
+  // Global Values
+  vec3 Attenuation; // x = C1, y = C2, z = C3
+  vec3 FogColor;
+  vec3 GlobalAmbient;
+  vec3 NearFar; // x = near, y = far
+  vec3 ViewVec;
+} LA;
+
+uniform vec3  cameraPosition;
+uniform sampler2D diffuse;
+uniform sampler2D specular;
+
+in VS_OUTPUT
+{
+    vec3 rasterColor;
+    vec2 uvPosition;
+    vec4 vertexPosition;
+    vec4 vertexNormal;
+} fs_in;
+
+// Output data
+out vec3 color;
+
+
+void main()
+{
+    vec4 vertexPosition = fs_in.vertexPosition;
+    vec4 vertexNormal = fs_in.vertexNormal;
+    vertexNormal = normalize(vertexNormal);
+
+    vec3 K_Specular = texture(specular, fs_in.uvPosition).rgb;
+    vec3 K_Diffuse  = texture(diffuse, fs_in.uvPosition).rgb;
+
+    vec3 finalColor = vec3(0.0f);
+
+    for(int i = 0; i < 8; ++i)
+    {
+      if(LA.LightActive[i] == 1) continue;
+      if(LA.LightType[i] < 2)
+      {
+        // Ambient
+        vec3 I_Ambient = LA.Ambient[i] * LA.K_Ambient;
+
+        // Diffuse
+        vec4 light = vec4(LA.LightPosition[i], 1.0);
+        vec4 L = normalize(light - vertexPosition);
+        float N_dot_L = max( dot(vertexNormal, L), 0.0f);
+        vec3 I_Dif = LA.I_Diffuse[i] * K_Diffuse * N_dot_L;
+
+        // Specular
+        vec3 coeff = LA.I_Specular[i] * K_Specular;
+        float shiny = pow(K_Specular.r, 2) * 255.f;
+        vec4 V = normalize(vec4(cameraPosition, 1.f) - vertexPosition);
+		    vec4 H = L + V;
+		    H = H / length(H);
+        float H_dot_N = max(dot(vertexNormal, H), 0.f);
+        float H_dot_N_ns = pow(H_dot_N, shiny);
+        if(H_dot_N == 0.f) H_dot_N_ns = 0.f;
+        vec3 I_spec = coeff * H_dot_N_ns;
+
+        // attenutation
+        float c1 = LA.Attenuation.x;
+        float c2 = LA.Attenuation.y;
+        float c3 = LA.Attenuation.z;
+        float dist = length(L);
+        float dist_sq = pow(dist, 2);
+        float deno = c1 + (c2 * dist) + (c3 * dist_sq);
+        float att = min(1.f/deno, 1.0f);
+
+        if(LA.LightType[i] == 1)
+        {
+          float se = 0.f;
+          vec4 spotlight_dir = vec4(normalize(LA.LightDirection[i] - LA.LightPosition[i]), 0.f);
+          float alpha = dot(spotlight_dir, -L);
+          float theta = cos((LA.LightAngle[i].x / 180.f) * M_PI);
+          float phi = cos((LA.LightAngle[i].y / 180.f) * M_PI);
+          float top = alpha - phi;
+          float btm = theta - phi;
+          if(btm != 0.f && LA.LightAngle[i].y > LA.LightAngle[i].x)
+          {
+            se = top / btm;
+            se = pow(se, LA.LightAngle[i].z);
+            se = max(se, 0.0f);
+          }
+          finalColor += (att*(I_Ambient)) + (att * se * (I_spec + I_Dif));
+        }
+        else 
+          finalColor += (att*(I_Ambient)) + (att * (I_spec + I_Dif));
+      }
+      else
+      {
+        vec4 V = vec4(normalize(LA.LightPosition[i] - LA.LightDirection[i]), 0.f);
+        float N_dot_V = max(dot(vertexNormal, V), 0.f);
+        finalColor += N_dot_V * LA.I_Diffuse[i] * K_Diffuse;
+      }
+    }
+    float viewlength = length(LA.ViewVec);
+    float s_top = LA.NearFar.y - viewlength;
+    float s_btm = LA.NearFar.y - LA.NearFar.x;
+    float S = s_top / s_btm;
+    finalColor += (LA.Emissive + (LA.GlobalAmbient * LA.K_Ambient));
+    vec3 raster = S * finalColor + (1-S) * LA.FogColor;
+	color = raster;
+    // color = texture(diffuse, fs_in.uvPosition).rgb;
+}

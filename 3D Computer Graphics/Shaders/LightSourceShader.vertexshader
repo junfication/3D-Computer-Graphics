@@ -1,0 +1,22 @@
+#version 410 core
+
+uniform mat4  vertexTransform;
+uniform vec3  cameraPosition;
+uniform vec3  lightColor;
+
+// Input vertex data, different for all executions of this shader.
+layout(location = 0) in vec3 modelPosition;
+layout(location = 1) in vec3 vertexColor;
+layout(location = 2) in vec3 vertexNormal;
+
+// Interpolating vertex attributes over the rasterizer
+out VS_OUTPUT
+{
+    vec3 rasterColor;
+} vs_out;
+
+void main()
+{
+    vs_out.rasterColor = lightColor;// * dot(lightDirection, vertexNormal);
+    gl_Position = vertexTransform *  vec4( modelPosition, 1.0f );
+}

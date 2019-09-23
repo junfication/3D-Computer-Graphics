@@ -1,0 +1,114 @@
+#version 410 core
+
+uniform sampler2D up;
+uniform sampler2D down;
+uniform sampler2D left;
+uniform sampler2D right;
+uniform sampler2D front;
+uniform sampler2D back;
+
+uniform vec3      cameraPosition;
+
+// Interpolating vertex attributes over the rasterizer
+in VS_OUT
+{
+    vec4 vertexPosition; // interpolated vPosition
+    vec4 VN;
+    vec2 UV;
+} fs_in;
+
+out vec3 fragColor;
+
+vec3 UVmapper(vec3 pos)
+{
+  float u = 0.f;
+  float v = 0.f;
+  float abs_x = abs(pos.x);
+  float abs_y = abs(pos.y);
+  float abs_z = abs(pos.z);
+  float max = abs_x;
+  int side = 0; // 0 = x, 1 = y, 2 = z
+  if(max < abs_y)
+  {
+    max = abs_y;
+    side = 1;
+  }
+  if(max < abs_z)
+  {
+    max = abs_z;
+    side = 2;
+  }
+  switch (side)
+  {
+  case 0: // +- x
+    if(pos.x  > 0.f) // positive X
+    {
+      u = (-pos.z) / max;
+      v = (pos.y) / max;
+      u = 1.f - ((u + 1.f) / 2.f);
+      v = ((v + 1.f) / 2.f);
+      vec2 uv = vec2(u, v);
+      return texture( right, uv ).rgb;
+    }
+    else // negative X
+    {
+      u = (pos.z) / max;
+      v = (pos.y) / max;
+      u = 1.f - ((u + 1.f) / 2.f);
+      v = ((v + 1.f) / 2.f);
+      vec2 uv = vec2(u, v);
+      return texture( left, uv ).rgb;
+    }
+    break;
+  case 1: // +- Y
+    if(pos.y > 0.f) // positive Y
+    {
+      u = (pos.x) / max;
+      v = (-pos.z) / max;
+      u = ((u + 1.f) / 2.f);
+      v = 1.f - ((v + 1.f) / 2.f);
+      vec2 uv = vec2(u, v);
+      return texture( up, uv ).rgb;
+    }
+    else // negative Y
+    {
+      u = (pos.x) / max;
+      v = (pos.z) / max;
+      u = ((u + 1.f) / 2.f);
+      v = 1.f - ((v + 1.f) / 2.f);
+      vec2 uv = vec2(u, v);
+      return texture( down, uv ).rgb;
+    }
+    break;
+  case 2:  // +- Z
+    if(pos.z > 0.f) // positive Z
+    {
+      u = (pos.x) / max;
+      v = (pos.y) / max;
+      u = 1.f - ((u + 1.f) / 2.f);
+      v = ((v + 1.f) / 2.f);
+      vec2 uv = vec2(u, v);
+      return texture( front, uv ).rgb;
+    }
+    else // negative Z
+    {
+      u = (-pos.x) / max;
+      v = (pos.y) / max;
+      u = 1.f - ((u + 1.f) / 2.f);
+      v = ((v + 1.f) / 2.f);
+      vec2 uv = vec2(u, v);
+      return texture( back, uv ).rgb;
+    }
+    break;
+  }
+}
+
+void main()
+{
+  // vec3 tmp = vec3(0.f,0.f,5.f);
+  vec4 V = normalize(vec4(cameraPosition, 1.f) - fs_in.vertexPosition);
+  vec4 vertexN = normalize(fs_in.VN);
+  vec4 reflection = 2 * dot(vertexN, V) * vertexN;
+  reflection = reflection - V;
+  fragColor = UVmapper(reflection.xyz);
+}

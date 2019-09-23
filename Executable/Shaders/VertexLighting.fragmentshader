@@ -1,0 +1,19 @@
+#version 410 core
+
+uniform sampler2D diffuse;
+uniform sampler2D specular;
+
+in VS_OUTPUT
+{
+    vec3 rasterColor;
+    vec2 uvPosition;
+} fs_in;
+
+// Output data
+out vec3 color;
+
+
+void main()
+{
+   color = fs_in.rasterColor;
+}
